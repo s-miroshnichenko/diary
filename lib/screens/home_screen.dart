@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 
-import '../widgets/expandable_fab.dart';
 import '../widgets/day_card.dart';
 import '../widgets/sleep_input_sheet.dart';
 import '../widgets/mood_input_sheet.dart';
@@ -16,8 +15,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final GlobalKey<ExpandableFabState> _fabKey = GlobalKey<ExpandableFabState>();
-  bool _isFabOpen = false;
   bool _isLoading = true;
 
   final SupabaseDiaryService _diaryService = SupabaseDiaryService();
@@ -37,7 +34,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final now = DateTime.now();
     final yearMonth = "${now.year}-${now.month.toString().padLeft(2, '0')}";
-    // Вычисляем dateId для сегодняшнего дня
     final todayId = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
     final records = await _diaryService.getRecordsForMonth(yearMonth);
@@ -47,15 +43,63 @@ class _HomeScreenState extends State<HomeScreen> {
       newRecordsMap[record['date_id']] = record;
     }
 
-    // НОВОЕ: Гарантируем, что карточка "Сегодня" всегда есть в списке
+    // Гарантируем, что карточка "Сегодня" всегда есть в списке
     if (!newRecordsMap.containsKey(todayId)) {
-      newRecordsMap[todayId] = {'date_id': todayId}; // Создаем пустую заготовку
+      newRecordsMap[todayId] = {'date_id': todayId};
     }
 
     setState(() {
       _diaryRecords = newRecordsMap;
       _isLoading = false;
     });
+  }
+
+  // Метод для вызова календаря и загрузки выбранного дня
+  Future<void> _pickDateAndOpen(BuildContext context) async {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020), // Можно настроить, с какого года работает дневник
+      lastDate: DateTime.now(),  // Запрещаем выбирать даты из будущего
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.indigo.shade400, // Цвет шапки календаря
+              onPrimary: Colors.white,
+              onSurface: Colors.black87,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      final dateId = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+
+      // Если этой даты еще нет в нашей ленте, скачиваем её из БД
+      if (!_diaryRecords.containsKey(dateId)) {
+        // Показываем снекбар, чтобы юзер понимал, что идет загрузка
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Загрузка данных за ${pickedDate.day}...'),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        final record = await _diaryService.getRecordForDate(dateId);
+        
+        setState(() {
+          // Если запись есть в БД - берем её. Если нет - создаем пустую заготовку.
+          _diaryRecords[dateId] = record ?? {'date_id': dateId};
+        });
+      }
+      
+      // Поскольку ключи (даты) сортируются в ленте автоматически, 
+      // выбранная карточка просто появится на своем хронологическом месте.
+    }
   }
 
   Color getMoodColor(int score) {
@@ -76,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Получаем список всех дат и сортируем от новых к старым (Сегодня всегда будет первым)
+    // Сортируем даты по убыванию (от новых к старым)
     final sortedDates = _diaryRecords.keys.toList()
       ..sort((a, b) => b.compareTo(a));
 
@@ -84,14 +128,12 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('Дневник'),
-        // ... (Ваш код AppBar)
+        // Код вашего AppBar
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator()) 
-        : Stack(
-        children: [
-          ListView.builder(
-            padding: const EdgeInsets.only(bottom: 140, top: 16),
+        : ListView.builder(
+            padding: const EdgeInsets.only(bottom: 80, top: 16), // Уменьшили отступ снизу
             itemCount: sortedDates.length,
             itemBuilder: (context, index) {
               final dateId = sortedDates[index];
@@ -120,67 +162,14 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-
-          // Затемнение экрана (Overlay)
-          AnimatedOpacity(
-            opacity: _isFabOpen ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 200),
-            child: _isFabOpen
-                ? GestureDetector(
-                    onTap: () {
-                      _fabKey.currentState?.toggle();
-                    },
-                    child: Container(
-                      color: Colors.black.withOpacity(0.85),
-                      width: double.infinity,
-                      height: double.infinity,
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-
-          // Радиальное меню (ExpandableFab)
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 32.0),
-              child: ExpandableFab(
-                key: _fabKey,
-                distance: 95.0,
-                onToggle: (isOpen) {
-                  setState(() {
-                    _isFabOpen = isOpen;
-                  });
-                },
-                children: [
-                  ActionButton(
-                    onPressed: () => _handleAction('Другой день'),
-                    icon: Icons.calendar_month_rounded,
-                    label: 'Другой день',
-                  ),
-                  ActionButton(
-                    onPressed: () => _handleAction('Сейчас'),
-                    icon: Icons.access_time_filled_rounded,
-                    label: 'Сейчас',
-                    topLabel: 'Создать запись',
-                  ),
-                  ActionButton(
-                    onPressed: () => _handleAction('Сегодня'),
-                    icon: Icons.today_rounded,
-                    label: 'Сегодня',
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+      // НОВОЕ: Простая и красивая кнопка (FAB) для календаря
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _pickDateAndOpen(context),
+        backgroundColor: Colors.indigo.shade400,
+        elevation: 4,
+        child: const Icon(Icons.calendar_month_rounded, color: Colors.white),
       ),
     );
-  }
-
-  void _handleAction(String action) {
-    print('Выбрано: $action');
-    _fabKey.currentState?.toggle();
   }
 
   void _openInputBottomSheet(BuildContext context, String dateId, String period) {
