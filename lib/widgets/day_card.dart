@@ -1,11 +1,20 @@
 // Файл: lib/widgets/day_card.dart
+
 import 'package:flutter/material.dart';
+import '../utils/date_formatter.dart'; 
 
 class DayCard extends StatelessWidget {
-  final int dayIndex;
-  
-  // Данные для слотов (если null, значит слот пустой и ждет заполнения)
+  final String dateId;
+
+  // Сон
   final double? sleepHours;
+
+  // Оценки настроения (от 1 до 10)
+  final int? morningMoodScore;
+  final int? dayMoodScore;
+  final int? eveningMoodScore;
+
+  // Цвета настроения
   final Color? morningMoodColor;
   final Color? dayMoodColor;
   final Color? eveningMoodColor;
@@ -18,8 +27,11 @@ class DayCard extends StatelessWidget {
 
   const DayCard({
     Key? key,
-    required this.dayIndex,
+    required this.dateId, // Изменено
     this.sleepHours,
+    this.morningMoodScore,
+    this.dayMoodScore,
+    this.eveningMoodScore,
     this.morningMoodColor,
     this.dayMoodColor,
     this.eveningMoodColor,
@@ -31,11 +43,14 @@ class DayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // В реальном приложении здесь будет логика форматирования даты
-    String dateLabel = dayIndex == 0 ? 'Сегодня' : dayIndex == 1 ? 'Вчера' : 'Несколько дней назад';
-
-    // Выделяем карточку "Сегодня" визуально
-    final isToday = dayIndex == 0;
+    // НОВОЕ: Используем наш форматтер, чтобы получить строку 'СЕГОДНЯ, 25 ФЕВ.'
+    final formattedDate = DateFormatter.formatCardDate(dateId);
+    
+    // НОВОЕ: Проверяем, является ли эта карточка сегодняшней
+    // Сравниваем сырую дату из БД с сегодняшней сырой датой
+    final now = DateTime.now();
+    final todayString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    final isToday = dateId == todayString;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -44,7 +59,7 @@ class DayCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: isToday ? Colors.blue.shade100 : Colors.grey.shade200, 
+          color: isToday ? Colors.blue.shade100 : Colors.grey.shade200,
           width: isToday ? 1.5 : 1.0,
         ),
       ),
@@ -53,57 +68,54 @@ class DayCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  dateLabel,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold, 
-                    fontSize: isToday ? 20 : 16, // У "Сегодня" шрифт крупнее
-                    color: Colors.black87,
-                  ),
-                ),
-                if (isToday)
-                  Text(
-                    'Заполни день',
-                    style: TextStyle(fontSize: 14, color: Colors.blue.shade600, fontWeight: FontWeight.w500),
-                  ),
-              ],
+            
+            // НОВОЕ: Красивая дата (мелкий тонкий шрифт, ALL CAPS)
+            Text(
+              formattedDate, // Текст из DateFormatter (уже toUpperCase)
+              style: const TextStyle(
+                fontSize: 11.0,            // Мелкий
+                fontWeight: FontWeight.w400, // Тонкий (Regular)
+                color: Colors.grey,        // Серый
+                letterSpacing: 1.2,        // Межбуквенный интервал для ALL CAPS
+              ),
             ),
+            
             SizedBox(height: isToday ? 24 : 16),
+            
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Сон
+                // Слот: Сон
                 _TimeSlot(
                   label: 'Сон',
                   isEmpty: sleepHours == null,
-                  valueText: sleepHours != null ? '${sleepHours} ч' : null,
+                  valueText: sleepHours != null
+                      ? '${sleepHours! % 1 == 0 ? sleepHours!.toInt() : sleepHours} ч'
+                      : null,
                   filledColor: Colors.indigo.shade400,
                   onTap: onAddSleep,
                 ),
-                // Утро
+                // Слот: Утро
                 _TimeSlot(
                   label: 'Утро',
                   isEmpty: morningMoodColor == null,
-                  filledIcon: Icons.sentiment_satisfied_alt_rounded, // Можно менять иконку в зависимости от цвета/настроения
+                  valueText: morningMoodScore?.toString(),
                   filledColor: morningMoodColor,
                   onTap: onAddMorning,
                 ),
-                // День
+                // Слот: День
                 _TimeSlot(
                   label: 'День',
                   isEmpty: dayMoodColor == null,
-                  filledIcon: Icons.sentiment_satisfied_alt_rounded,
+                  valueText: dayMoodScore?.toString(),
                   filledColor: dayMoodColor,
                   onTap: onAddDay,
                 ),
-                // Вечер
+                // Слот: Вечер
                 _TimeSlot(
                   label: 'Вечер',
                   isEmpty: eveningMoodColor == null,
-                  filledIcon: Icons.sentiment_satisfied_alt_rounded,
+                  valueText: eveningMoodScore?.toString(),
                   filledColor: eveningMoodColor,
                   onTap: onAddEvening,
                 ),
@@ -116,7 +128,7 @@ class DayCard extends StatelessWidget {
   }
 }
 
-// Внутренний виджет для кликабельного слота (оставляем с подчеркиванием, так как используется только здесь)
+// Внутренний виджет остался без изменений
 class _TimeSlot extends StatelessWidget {
   final String label;
   final bool isEmpty;
@@ -142,26 +154,26 @@ class _TimeSlot extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 48, // Чуть меньше, чем в InteractiveTodayCard, чтобы влезало на все экраны
+            width: 48,
             height: 48,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isEmpty ? Colors.grey.shade50 : filledColor,
-              border: isEmpty ? Border.all(color: Colors.grey.shade300, width: 2) : null,
-              boxShadow: isEmpty ? null : [
-                BoxShadow(
-                  color: filledColor!.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                )
-              ]
+                shape: BoxShape.circle,
+                color: isEmpty ? Colors.grey.shade50 : filledColor,
+                border: isEmpty ? Border.all(color: Colors.grey.shade300, width: 2) : null,
+                boxShadow: isEmpty ? null : [
+                  BoxShadow(
+                    color: filledColor!.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ]
             ),
             child: Center(
               child: isEmpty
                   ? Icon(Icons.add_rounded, color: Colors.grey.shade400, size: 24)
                   : (valueText != null
-                      ? Text(valueText!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))
-                      : Icon(filledIcon ?? Icons.check_rounded, color: Colors.white, size: 24)),
+                  ? Text(valueText!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))
+                  : Icon(filledIcon ?? Icons.check_rounded, color: Colors.white, size: 24)),
             ),
           ),
           const SizedBox(height: 8),

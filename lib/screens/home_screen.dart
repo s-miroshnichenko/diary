@@ -1,8 +1,12 @@
 // Файл: lib/screens/home_screen.dart
+
 import 'package:flutter/material.dart';
+
 import '../widgets/expandable_fab.dart';
 import '../widgets/day_card.dart';
 import '../widgets/sleep_input_sheet.dart';
+import '../widgets/mood_input_sheet.dart';
+import '../services/supabase_diary_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -14,54 +18,110 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ExpandableFabState> _fabKey = GlobalKey<ExpandableFabState>();
   bool _isFabOpen = false;
+  bool _isLoading = true;
 
-  // ДОБАВЛЕНО: Мапа для хранения введенных данных о сне для каждого дня
-  final Map<int, double> _sleepData = {};
+  final SupabaseDiaryService _diaryService = SupabaseDiaryService();
+
+  Map<String, Map<String, dynamic>> _diaryRecords = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final now = DateTime.now();
+    final yearMonth = "${now.year}-${now.month.toString().padLeft(2, '0')}";
+    // Вычисляем dateId для сегодняшнего дня
+    final todayId = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    final records = await _diaryService.getRecordsForMonth(yearMonth);
+
+    final Map<String, Map<String, dynamic>> newRecordsMap = {};
+    for (var record in records) {
+      newRecordsMap[record['date_id']] = record;
+    }
+
+    // НОВОЕ: Гарантируем, что карточка "Сегодня" всегда есть в списке
+    if (!newRecordsMap.containsKey(todayId)) {
+      newRecordsMap[todayId] = {'date_id': todayId}; // Создаем пустую заготовку
+    }
+
+    setState(() {
+      _diaryRecords = newRecordsMap;
+      _isLoading = false;
+    });
+  }
+
+  Color getMoodColor(int score) {
+    switch (score) {
+      case 1: return const Color(0xFF1A237E);
+      case 2: return const Color(0xFF3949AB);
+      case 3: return const Color(0xFF5C6BC0);
+      case 4: return const Color(0xFF26A69A);
+      case 5: return const Color(0xFF4DB6AC);
+      case 6: return const Color(0xFF81C784);
+      case 7: return const Color(0xFFFFB300);
+      case 8: return const Color(0xFFFB8C00);
+      case 9: return const Color(0xFFE53935);
+      case 10: return const Color(0xFFB71C1C);
+      default: return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Получаем список всех дат и сортируем от новых к старым (Сегодня всегда будет первым)
+    final sortedDates = _diaryRecords.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Дневник', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.black54),
-            onPressed: () {},
-          ),
-        ],
+        title: const Text('Дневник'),
+        // ... (Ваш код AppBar)
       ),
-      body: Stack(
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator()) 
+        : Stack(
         children: [
-          // 1. Лента дней
           ListView.builder(
             padding: const EdgeInsets.only(bottom: 140, top: 16),
-            itemCount: 7,
+            itemCount: sortedDates.length,
             itemBuilder: (context, index) {
-              
-              // Ищем сохраненный сон в мапе. Если его нет — используем твои моковые данные.
-              // Сделаем для "Сегодня" (index == 0) значение null по умолчанию, чтобы было что заполнять
-              double? currentSleep = _sleepData.containsKey(index) 
-                  ? _sleepData[index] 
-                  : (index == 0 ? null : 8.0 - (index * 0.2));
+              final dateId = sortedDates[index];
+              final record = _diaryRecords[dateId]!;
+
+              final double? currentSleep = record['sleep_hours'] != null 
+                  ? (record['sleep_hours'] as num).toDouble() 
+                  : null;
+              final int? morningScore = record['morning_mood'] as int?;
+              final int? dayScore = record['day_mood'] as int?;
+              final int? eveningScore = record['evening_mood'] as int?;
 
               return DayCard(
-                dayIndex: index,
-                sleepHours: currentSleep, // ИСПОЛЬЗУЕМ ПЕРЕМЕННУЮ ЗДЕСЬ
-                morningMoodColor: index % 2 == 0 ? Colors.green.shade400 : Colors.blue.shade300,
-                dayMoodColor: index == 0 ? null : Colors.green.shade500,
-                eveningMoodColor: index == 0 ? null : Colors.orange.shade400,
-                onAddSleep: () => _openInputBottomSheet(context, index, 'Сон'),
-                onAddMorning: () => _openInputBottomSheet(context, index, 'Утро'),
-                onAddDay: () => _openInputBottomSheet(context, index, 'День'),
-                onAddEvening: () => _openInputBottomSheet(context, index, 'Вечер'),
+                dateId: dateId, 
+                sleepHours: currentSleep,
+                morningMoodScore: morningScore,
+                morningMoodColor: morningScore != null ? getMoodColor(morningScore) : null,
+                dayMoodScore: dayScore,
+                dayMoodColor: dayScore != null ? getMoodColor(dayScore) : null,
+                eveningMoodScore: eveningScore,
+                eveningMoodColor: eveningScore != null ? getMoodColor(eveningScore) : null,
+                onAddSleep: () => _openInputBottomSheet(context, dateId, 'Сон'),
+                onAddMorning: () => _openInputBottomSheet(context, dateId, 'Утро'),
+                onAddDay: () => _openInputBottomSheet(context, dateId, 'День'),
+                onAddEvening: () => _openInputBottomSheet(context, dateId, 'Вечер'),
               );
             },
           ),
 
-          // 2. Затемнение экрана (Overlay)
+          // Затемнение экрана (Overlay)
           AnimatedOpacity(
             opacity: _isFabOpen ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 200),
@@ -71,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _fabKey.currentState?.toggle();
                     },
                     child: Container(
-                      color: Colors.black.withValues(alpha: 0.85),
+                      color: Colors.black.withOpacity(0.85),
                       width: double.infinity,
                       height: double.infinity,
                     ),
@@ -79,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 : const SizedBox.shrink(),
           ),
 
-          // 3. Радиальное меню (ExpandableFab)
+          // Радиальное меню (ExpandableFab)
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
@@ -123,22 +183,54 @@ class _HomeScreenState extends State<HomeScreen> {
     _fabKey.currentState?.toggle();
   }
 
-  // Метод, который вызывается при клике на пустой слот в карточке дня
-  void _openInputBottomSheet(BuildContext context, int dayIndex, String period) {
-    print('Открываем форму для: $period, день: $dayIndex');
-    
-    // ДОБАВЛЕНО: Маршрутизация в зависимости от выбранного периода
+  void _openInputBottomSheet(BuildContext context, String dateId, String period) {
     if (period == 'Сон') {
-      _openSleepInput(context, dayIndex);
+      _openSleepInput(context, dateId);
     } else {
-      // TODO: В будущем здесь будут вызовы для _openMoodInput(context, dayIndex, period)
+      _openMoodInput(context, dateId, period);
     }
   }
 
-  // Обновленный метод _openSleepInput (теперь принимает dayIndex)
-  void _openSleepInput(BuildContext context, int dayIndex) {
-    // Если для этого дня уже есть данные, показываем их как стартовые
-    double initialValue = _sleepData[dayIndex] ?? 8.0;
+  void _openMoodInput(BuildContext context, String dateId, String period) {
+    int initialScore = 5;
+    final record = _diaryRecords[dateId] ?? {};
+
+    if (period == 'Утро' && record['morning_mood'] != null) initialScore = record['morning_mood'];
+    if (period == 'День' && record['day_mood'] != null) initialScore = record['day_mood'];
+    if (period == 'Вечер' && record['evening_mood'] != null) initialScore = record['evening_mood'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return MoodInputSheet(
+          initialScore: initialScore,
+          period: period,
+          onSave: (score) async {
+            setState(() {
+              if (!_diaryRecords.containsKey(dateId)) {
+                _diaryRecords[dateId] = {'date_id': dateId};
+              }
+              
+              if (period == 'Утро') _diaryRecords[dateId]!['morning_mood'] = score;
+              if (period == 'День') _diaryRecords[dateId]!['day_mood'] = score;
+              if (period == 'Вечер') _diaryRecords[dateId]!['evening_mood'] = score;
+            });
+
+            await _diaryService.saveMood(dateId, period, score);
+          },
+        );
+      },
+    );
+  }
+
+  void _openSleepInput(BuildContext context, String dateId) {
+    final record = _diaryRecords[dateId] ?? {};
+    
+    double initialValue = record['sleep_hours'] != null 
+        ? (record['sleep_hours'] as num).toDouble() 
+        : 8.0;
 
     showModalBottomSheet(
       context: context,
@@ -147,15 +239,15 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) {
         return SleepInputSheet(
           initialSleep: initialValue,
-          onSave: (sleepValue) {
-            print('Пользователь спал: $sleepValue часов в день $dayIndex');
-            
-            // ДОБАВЛЕНО: Обновляем состояние экрана
+          onSave: (sleepValue) async {
             setState(() {
-              _sleepData[dayIndex] = sleepValue;
+              if (!_diaryRecords.containsKey(dateId)) {
+                _diaryRecords[dateId] = {'date_id': dateId};
+              }
+              _diaryRecords[dateId]!['sleep_hours'] = sleepValue;
             });
-            
-            // TODO: Здесь вызовем SupabaseDiaryService.saveSleep(...)
+
+            await _diaryService.saveSleep(dateId, sleepValue);
           },
         );
       },

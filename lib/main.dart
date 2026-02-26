@@ -5,9 +5,13 @@ import 'package:flutter/material.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Инициализируем русскую локаль для дат
+  await initializeDateFormatting('ru', null);
   
   // Подключаемся к нашему облаку
   await Supabase.initialize(

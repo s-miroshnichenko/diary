@@ -34,7 +34,7 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
       case 7: return const Color(0xFFFFB300);
       case 8: return const Color(0xFFFB8C00);
       case 9: return const Color(0xFFE53935);
-      case 10: return const Color(0xB71C1C);
+      case 10: return const Color(0xFFB71C1C);
       default: return Colors.grey;
     }
   }
@@ -100,7 +100,7 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
           const SizedBox(height: 16),
           // Маркер свайпа
           Container(
-            width: 40,
+            width: 60,
             height: 5,
             decoration: BoxDecoration(
               color: Colors.grey.shade300,
@@ -152,24 +152,32 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
                       final isSelected = score == _selectedScore;
                       final color = getMoodColor(score);
                       
-                      return AnimatedContainer(
+                      // ИСПОЛЬЗУЕМ СОВРЕМЕННЫЙ AnimatedScale + AnimatedOpacity
+                      return AnimatedScale(
+                        scale: isSelected ? 1.1 : 0.9,
                         duration: const Duration(milliseconds: 200),
                         curve: Curves.easeOut,
-                        // Меняем размер и прозрачность в зависимости от того, в центре ли элемент
-                        transform: Matrix4.identity()..scale(isSelected ? 1.1 : 0.9),
-                        transformAlignment: Alignment.center,
-                        child: Opacity(
+                        child: AnimatedOpacity(
                           opacity: isSelected ? 1.0 : 0.4,
-                          child: Center(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                                                    child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0), // Отступы по бокам!
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              // Убрали mainAxisAlignment: MainAxisAlignment.center
                               children: [
-                                Text(
-                                  score.toString(),
-                                  style: TextStyle(
-                                    fontSize: isSelected ? 32 : 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: color,
+                                // Блок с цифрой фиксированной ширины, чтобы текст не прыгал
+                                SizedBox(
+                                  width: 40, 
+                                  child: Center( // Центрируем цифру внутри её блока
+                                    child: Text(
+                                      score.toString(),
+                                      style: TextStyle(
+                                        fontSize: isSelected ? 32 : 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: color,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
