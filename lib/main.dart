@@ -6,6 +6,8 @@ import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +31,16 @@ class MoodDiaryApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Дневник Настроения',
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ru', 'RU'), // Русский
+        Locale('en', 'US'), // Английский (оставьте как запасной)
+        // Сюда можно будет дописать другие языки: Locale('es', ''), Locale('de', '') и т.д.
+      ],
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.indigo,

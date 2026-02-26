@@ -99,4 +99,21 @@ class SupabaseDiaryService {
       return []; // Возвращаем пустой список, чтобы UI не упал
     }
   }
+
+  Future<void> saveFullDay({
+    required String dateId,
+    required double sleepHours,
+    required int morningMood,
+    required int dayMood,
+    required int eveningMood,
+  }) async {
+    await _supabase.from(_table).upsert({
+      'user_id': currentUserId,
+      'date_id': dateId,
+      'sleep_hours': sleepHours,
+      'morning_mood': morningMood,
+      'day_mood': dayMood,
+      'evening_mood': eveningMood,
+    }, onConflict: 'user_id, date_id');
+  }
 }
