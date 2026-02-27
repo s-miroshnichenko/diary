@@ -1,4 +1,5 @@
 // Файл: lib/widgets/day_card.dart
+
 import 'package:flutter/material.dart';
 import '../utils/date_formatter.dart'; 
 
@@ -36,29 +37,33 @@ class DayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final formattedDate = DateFormatter.formatCardDate(dateId);
     final multiLineDate = formattedDate.replaceFirst(', ', '\n');
-    
     final now = DateTime.now();
     final todayString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final isToday = dateId == todayString;
 
     return Card(
+      // Все карточки теперь белые, чтобы выделяться на фоне grey.shade50
+      color: Colors.white,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      elevation: isToday ? 4 : 0,
-      shadowColor: isToday ? Colors.black.withValues(alpha: 0.1) : Colors.transparent,
+      // Возвращаем прошлым дням легкую тень (1), а сегодня - заметную (4)
+      elevation: isToday ? 4 : 1,
+      shadowColor: isToday 
+          ? Colors.black.withValues(alpha: 0.15) 
+          : Colors.black.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isToday ? Colors.blue.shade100 : Colors.grey.shade200,
+          color: isToday ? Colors.blue.shade200 : Colors.grey.shade200,
           width: isToday ? 1.5 : 1.0,
         ),
       ),
       child: Padding(
-        // Если это не сегодня (нет подписей), делаем нижний отступ еще меньше!
-        padding: EdgeInsets.only(
+        // Одинаковый отступ снизу (12.0), чтобы тени от кружков не перекрывали контур
+        padding: const EdgeInsets.only(
           left: 14.0, 
           right: 14.0, 
           top: 12.0, 
-          bottom: isToday ? 12.0 : 8.0, 
+          bottom: 12.0, 
         ),
         child: Row(
           crossAxisAlignment: isToday ? CrossAxisAlignment.end : CrossAxisAlignment.center, 
@@ -67,32 +72,30 @@ class DayCard extends StatelessWidget {
             SizedBox(
               width: 75, 
               child: Padding(
-                // Немного приподнимаем дату, если нет подписей, чтобы она была по центру кружков
                 padding: EdgeInsets.only(bottom: isToday ? 16.0 : 0),
                 child: Text(
                   multiLineDate,
                   style: TextStyle(
                     fontSize: 11.0,
-                    fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
-                    color: isToday ? Colors.blue.shade700 : Colors.grey.shade500,
+                    fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
+                    color: isToday ? Colors.blue.shade700 : Colors.grey.shade700,
                     height: 1.4,
                     letterSpacing: 0.5,
                   ),
                 ),
               ),
             ),
-            
             // --- ПРАВЫЙ БЛОК: КРУЖКИ В СЕТКЕ ---
             Expanded(
               child: Row(
                 children: [
                   Expanded(
                     child: _TimeSlot(
-                      label: 'Сон',
-                      showLabel: isToday, // Показываем подпись только сегодня
+                      label: 'Сон, ч',
+                      showLabel: isToday,
                       isEmpty: sleepHours == null,
                       valueText: sleepHours != null
-                          ? '${sleepHours! % 1 == 0 ? sleepHours!.toInt() : sleepHours}ч'
+                          ? '${sleepHours! % 1 == 0 ? sleepHours!.toInt() : sleepHours}'
                           : null,
                       filledColor: Colors.indigo.shade400,
                       onTap: onAddSleep,
@@ -159,11 +162,6 @@ class _TimeSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Проверяем, является ли значение оценкой 5, 6 или 7
-    final bool isLightShade = ['5', '6', '7'].contains(valueText);
-    // Назначаем темно-серый цвет для светлых оттенков, иначе белый
-    final Color textColor = isLightShade ? Colors.grey.shade800 : Colors.white;
-
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -172,30 +170,39 @@ class _TimeSlot extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 44, 
+            height: 44, 
             decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isEmpty ? Colors.grey.shade50 : filledColor,
-                border: isEmpty ? Border.all(color: Colors.grey.shade300, width: 1.5) : null,
-                boxShadow: isEmpty ? null : [
-                  BoxShadow(
-                    color: filledColor!.withValues(alpha: 0.3),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  )
-                ]
+              shape: BoxShape.circle,
+              color: isEmpty ? Colors.grey.shade50 : filledColor,
+              border: isEmpty 
+                  ? Border.all(color: Colors.grey.shade300, width: 1.5) 
+                  : Border.all(color: Colors.white, width: 2),
+              boxShadow: isEmpty ? null : [
+                BoxShadow(
+                  color: filledColor!.withValues(alpha: 0.4), // Прозрачность чуть меньше
+                  blurRadius: 4, // Уменьшили размытие, чтобы тень была компактнее
+                  offset: const Offset(0, 2), // Уменьшили сдвиг вниз (было 4)
+                )
+              ]
             ),
             child: Center(
               child: isEmpty
                   ? Icon(Icons.add_rounded, color: Colors.grey.shade400, size: 20)
                   : (valueText != null
-                      ? Text(
-                          valueText!,
-                          style: TextStyle(
-                            color: textColor, // Используем вычисленный цвет
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                      ? Padding(
+                          // Добавили отступ, чтобы при масштабировании текст не касался краев круга
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              valueText!,
+                              style: const TextStyle(
+                                color: Colors.white, 
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18, 
+                              ),
+                            ),
                           ),
                         )
                       : Icon(filledIcon ?? Icons.check_rounded, color: Colors.white, size: 20)),
@@ -208,7 +215,7 @@ class _TimeSlot extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w400,
-                color: isEmpty ? Colors.grey.shade400 : Colors.black87,
+                color: isEmpty ? Colors.grey.shade500 : Colors.black87,
               ),
             ),
           ]
