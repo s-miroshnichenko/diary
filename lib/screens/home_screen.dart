@@ -183,6 +183,11 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             } catch (e) {
               print('Ошибка при сохранении дня: $e');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка БД: $e'), backgroundColor: Colors.red),
+                );
+              }
             }
           },
         );
@@ -397,6 +402,11 @@ class _HomeScreenState extends State<HomeScreen> {
               await _diaryService.saveMood(dateId, period, score);
             } catch (e) {
               print('Ошибка сохранения настроения: $e');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка БД: $e'), backgroundColor: Colors.red),
+                );
+              }
             }
           },
         );
@@ -429,6 +439,11 @@ class _HomeScreenState extends State<HomeScreen> {
               await _diaryService.saveSleep(dateId, sleepValue);
             } catch (e) {
               print('Ошибка сохранения сна: $e');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка БД: $e'), backgroundColor: Colors.red),
+                );
+              }
             }
           },
         );

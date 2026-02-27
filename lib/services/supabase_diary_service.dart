@@ -3,16 +3,19 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseDiaryService {
-  // Получаем доступ к клиенту Supabase
   final _supabase = Supabase.instance.client;
-
-  // Название нашей таблицы в облаке
   final String _table = 'daily_records';
 
-  // ВРЕМЕННО: Заглушка для локальной разработки.
-  // Когда прикрутите авторизацию, этот геттер будет возвращать реальный ID:
-  // return _supabase.auth.currentUser?.id ?? '';
-  String get currentUserId => 'test_user_123';
+  // ТЕПЕРЬ БЕРЕМ РЕАЛЬНЫЙ ID ИЗ СЕССИИ SUPABASE
+  String get currentUserId {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      // Этого не должно происходить, так как мы логинимся в main.dart, 
+      // но для безопасности лучше бросить понятное исключение
+      throw Exception('Пользователь не авторизован');
+    }
+    return user.id;
+  }
 
   // --- МЕТОДЫ ЗАПИСИ (UPSERT) ---
 

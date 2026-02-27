@@ -1,7 +1,6 @@
 // Файл: lib/widgets/day_card.dart
 
 import 'package:flutter/material.dart';
-import '../utils/date_formatter.dart'; 
 
 class DayCard extends StatelessWidget {
   final String dateId;
@@ -33,22 +32,67 @@ class DayCard extends StatelessWidget {
     required this.onAddEvening,
   }) : super(key: key);
 
+  /// Функция для форматирования даты в нужный нам вид:
+  /// "СЕГОДНЯ, 27 ФЕВ.", "ВЧЕРА, 26 ФЕВ.", "СРЕДА, 25 ФЕВ."
+  String _getFormattedDateString(String dateId) {
+    try {
+      final parts = dateId.split('-');
+      if (parts.length != 3) return dateId;
+
+      final year = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final day = int.parse(parts[2]);
+
+      final date = DateTime(year, month, day);
+      final now = DateTime.now();
+      
+      // Обнуляем время для корректного расчета разницы в днях
+      final today = DateTime(now.year, now.month, now.day);
+      final dateToCompare = DateTime(date.year, date.month, date.day);
+
+      final difference = today.difference(dateToCompare).inDays;
+
+      String prefix;
+      if (difference == 0) {
+        prefix = 'СЕГОДНЯ';
+      } else if (difference == 1) {
+        prefix = 'ВЧЕРА';
+      } else {
+        const weekDays = [
+          '', 'ПОНЕДЕЛЬНИК', 'ВТОРНИК', 'СРЕДА', 'ЧЕТВЕРГ',
+          'ПЯТНИЦА', 'СУББОТА', 'ВОСКРЕСЕНЬЕ'
+        ];
+        prefix = weekDays[date.weekday];
+      }
+
+      const months = [
+        '', 'ЯНВ.', 'ФЕВ.', 'МАР.', 'АПР.', 'МАЯ', 'ИЮН.',
+        'ИЮЛ.', 'АВГ.', 'СЕН.', 'ОКТ.', 'НОЯБ.', 'ДЕК.'
+      ];
+      final monthStr = months[month];
+
+      return '$prefix, $day $monthStr';
+    } catch (e) {
+      return dateId; // Возвращаем как есть в случае ошибки парсинга
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormatter.formatCardDate(dateId);
-    final multiLineDate = formattedDate.replaceFirst(', ', '\n');
     final now = DateTime.now();
     final todayString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final isToday = dateId == todayString;
 
+    // Генерируем нужную строку и заменяем запятую на перенос строки
+    final formattedDate = _getFormattedDateString(dateId);
+    final multiLineDate = formattedDate.replaceFirst(', ', '\n');
+
     return Card(
-      // Все карточки теперь белые, чтобы выделяться на фоне grey.shade50
       color: Colors.white,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      // Возвращаем прошлым дням легкую тень (1), а сегодня - заметную (4)
       elevation: isToday ? 4 : 1,
-      shadowColor: isToday 
-          ? Colors.black.withValues(alpha: 0.15) 
+      shadowColor: isToday
+          ? Colors.black.withValues(alpha: 0.15)
           : Colors.black.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -58,29 +102,32 @@ class DayCard extends StatelessWidget {
         ),
       ),
       child: Padding(
-        // Одинаковый отступ снизу (12.0), чтобы тени от кружков не перекрывали контур
         padding: const EdgeInsets.only(
-          left: 14.0, 
-          right: 14.0, 
-          top: 12.0, 
-          bottom: 12.0, 
+          left: 14.0,
+          right: 14.0,
+          top: 12.0,
+          bottom: 12.0,
         ),
         child: Row(
-          crossAxisAlignment: isToday ? CrossAxisAlignment.end : CrossAxisAlignment.center, 
+          crossAxisAlignment: isToday ? CrossAxisAlignment.end : CrossAxisAlignment.center,
           children: [
             // --- ЛЕВЫЙ БЛОК: ДАТА ---
             SizedBox(
-              width: 75, 
+              width: 75,
               child: Padding(
                 padding: EdgeInsets.only(bottom: isToday ? 16.0 : 0),
-                child: Text(
-                  multiLineDate,
-                  style: TextStyle(
-                    fontSize: 11.0,
-                    fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
-                    color: isToday ? Colors.blue.shade700 : Colors.grey.shade700,
-                    height: 1.4,
-                    letterSpacing: 0.5,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown, // Поможет длинным дням (ПОНЕДЕЛЬНИК) влезть в 75 пикселей
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    multiLineDate,
+                    style: TextStyle(
+                      fontSize: 11.0,
+                      fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
+                      color: isToday ? Colors.blue.shade700 : Colors.grey.shade700,
+                      height: 1.4,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ),
@@ -170,37 +217,38 @@ class _TimeSlot extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 44, 
-            height: 44, 
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isEmpty ? Colors.grey.shade50 : filledColor,
-              border: isEmpty 
-                  ? Border.all(color: Colors.grey.shade300, width: 1.5) 
+              border: isEmpty
+                  ? Border.all(color: Colors.grey.shade300, width: 1.5)
                   : Border.all(color: Colors.white, width: 2),
-              boxShadow: isEmpty ? null : [
-                BoxShadow(
-                  color: filledColor!.withValues(alpha: 0.4), // Прозрачность чуть меньше
-                  blurRadius: 4, // Уменьшили размытие, чтобы тень была компактнее
-                  offset: const Offset(0, 2), // Уменьшили сдвиг вниз (было 4)
-                )
-              ]
+              boxShadow: isEmpty
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: filledColor!.withValues(alpha: 0.4),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
             ),
             child: Center(
               child: isEmpty
                   ? Icon(Icons.add_rounded, color: Colors.grey.shade400, size: 20)
                   : (valueText != null
                       ? Padding(
-                          // Добавили отступ, чтобы при масштабировании текст не касался краев круга
                           padding: const EdgeInsets.symmetric(horizontal: 4.0),
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
                               valueText!,
                               style: const TextStyle(
-                                color: Colors.white, 
+                                color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18, 
+                                fontSize: 18,
                               ),
                             ),
                           ),
@@ -217,7 +265,7 @@ class _TimeSlot extends StatelessWidget {
                 fontWeight: FontWeight.w400,
                 color: isEmpty ? Colors.grey.shade500 : Colors.black87,
               ),
-            ),
+            )
           ]
         ],
       ),
