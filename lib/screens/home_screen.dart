@@ -55,11 +55,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _pickDateAndOpen(BuildContext context, {DateTime? initialDate}) async {
     DateTime tempSelectedDate = initialDate ?? DateTime.now();
-
     final DateTime? pickedDate = await showModalBottomSheet<DateTime>(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: true, 
+      isScrollControlled: true,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
@@ -220,10 +219,18 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Пропущено $count дней';
   }
 
+  String _getMonthYearName(DateTime date) {
+    const months = [
+      'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
   Widget _buildBottomNavItem({
-    required IconData icon, 
-    required String label, 
-    required bool isActive, 
+    required IconData icon,
+    required String label,
+    required bool isActive,
     required VoidCallback onTap
   }) {
     final color = isActive ? Colors.white : Colors.white.withOpacity(0.6);
@@ -249,29 +256,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final sortedDates = _diaryRecords.keys.toList()
       ..sort((a, b) => b.compareTo(a));
 
+    final now = DateTime.now();
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5), 
-      // Полностью убрали AppBar!
+      backgroundColor: const Color(0xFFF0F2F5),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
         onPressed: () => _pickDateAndOpen(context),
         backgroundColor: Colors.white,
         shape: CircleBorder(
           side: BorderSide(color: primaryTeal, width: 3.0),
-        ), 
+        ),
         elevation: 4,
         child: Icon(Icons.add_rounded, color: primaryTeal, size: 32),
       ),
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
-        color: primaryTeal, 
-        surfaceTintColor: Colors.transparent, 
+        color: primaryTeal,
+        surfaceTintColor: Colors.transparent,
         elevation: 10,
         child: SizedBox(
           height: 60,
@@ -280,86 +288,132 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildBottomNavItem(icon: Icons.list_alt_rounded, label: 'Записи', isActive: true, onTap: () {}),
               _buildBottomNavItem(icon: Icons.bar_chart_rounded, label: 'Статистика', isActive: false, onTap: () {}),
-              const SizedBox(width: 48), 
+              const SizedBox(width: 48),
               _buildBottomNavItem(icon: Icons.calendar_month_rounded, label: 'Календарь', isActive: false, onTap: () {}),
               _buildBottomNavItem(icon: Icons.more_horiz_rounded, label: 'Больше', isActive: false, onTap: () {}),
             ],
           ),
         ),
       ),
-      // Обернули body в SafeArea
       body: SafeArea(
-        child: _isLoading 
-          ? const Center(child: CircularProgressIndicator()) 
-          : ListView.builder(
-              // Увеличили верхний отступ (top: 24.0), чтобы карточка "дышала"
-              padding: const EdgeInsets.only(bottom: 40, top: 24.0),
-              itemCount: sortedDates.length,
-              itemBuilder: (context, index) {
-                final dateId = sortedDates[index];
-                final record = _diaryRecords[dateId]!;
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                padding: const EdgeInsets.only(bottom: 40, top: 24.0),
+                itemCount: sortedDates.length,
+                itemBuilder: (context, index) {
+                  final dateId = sortedDates[index];
+                  final record = _diaryRecords[dateId]!;
 
-                final double? currentSleep = record['sleep_hours'] != null 
-                    ? (record['sleep_hours'] as num).toDouble() 
-                    : null;
-                final int? morningScore = record['morning_mood'] as int?;
-                final int? dayScore = record['day_mood'] as int?;
-                final int? eveningScore = record['evening_mood'] as int?;
+                  final double? currentSleep = record['sleep_hours'] != null
+                      ? (record['sleep_hours'] as num).toDouble()
+                      : null;
+                  final int? morningScore = record['morning_mood'] as int?;
+                  final int? dayScore = record['day_mood'] as int?;
+                  final int? eveningScore = record['evening_mood'] as int?;
 
-                Widget cardWidget = DayCard(
-                  dateId: dateId, 
-                  sleepHours: currentSleep,
-                  morningMoodScore: morningScore,
-                  morningMoodColor: morningScore != null ? getMoodColor(morningScore) : null,
-                  dayMoodScore: dayScore,
-                  dayMoodColor: dayScore != null ? getMoodColor(dayScore) : null,
-                  eveningMoodScore: eveningScore,
-                  eveningMoodColor: eveningScore != null ? getMoodColor(eveningScore) : null,
-                  onAddSleep: () => _openInputBottomSheet(context, dateId, 'Сон'),
-                  onAddMorning: () => _openInputBottomSheet(context, dateId, 'Утро'),
-                  onAddDay: () => _openInputBottomSheet(context, dateId, 'День'),
-                  onAddEvening: () => _openInputBottomSheet(context, dateId, 'Вечер'),
-                );
+                  Widget cardWidget = DayCard(
+                    dateId: dateId,
+                    sleepHours: currentSleep,
+                    morningMoodScore: morningScore,
+                    morningMoodColor: morningScore != null ? getMoodColor(morningScore) : null,
+                    dayMoodScore: dayScore,
+                    dayMoodColor: dayScore != null ? getMoodColor(dayScore) : null,
+                    eveningMoodScore: eveningScore,
+                    eveningMoodColor: eveningScore != null ? getMoodColor(eveningScore) : null,
+                    onAddSleep: () => _openInputBottomSheet(context, dateId, 'Сон'),
+                    onAddMorning: () => _openInputBottomSheet(context, dateId, 'Утро'),
+                    onAddDay: () => _openInputBottomSheet(context, dateId, 'День'),
+                    onAddEvening: () => _openInputBottomSheet(context, dateId, 'Вечер'),
+                  );
 
-                Widget? gapIndicator;
-                if (index < sortedDates.length - 1) {
-                  final currentDate = DateTime.parse(sortedDates[index]);
-                  final nextOlderDate = DateTime.parse(sortedDates[index + 1]);
-                  final int missedDays = currentDate.difference(nextOlderDate).inDays.abs() - 1;
+                  Widget? gapIndicator;
+                  Widget? monthSeparator;
 
-                  if (missedDays > 0) {
-                    gapIndicator = GestureDetector(
-                      onTap: () => _pickDateAndOpen(
-                        context, 
-                        initialDate: currentDate.subtract(const Duration(days: 1)),
-                      ),
-                      behavior: HitTestBehavior.opaque,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Center(
-                          child: Text(
-                            _getDaysDeclension(missedDays),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade500,
-                              fontWeight: FontWeight.w500,
+                  if (index < sortedDates.length - 1) {
+                    final currentDate = DateTime.parse(sortedDates[index]);
+                    final nextOlderDate = DateTime.parse(sortedDates[index + 1]);
+
+                    final int missedDays = currentDate.difference(nextOlderDate).inDays.abs() - 1;
+                    if (missedDays > 0) {
+                      gapIndicator = GestureDetector(
+                        onTap: () => _pickDateAndOpen(
+                          context,
+                          initialDate: currentDate.subtract(const Duration(days: 1)),
+                        ),
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Center(
+                            child: Text(
+                              _getDaysDeclension(missedDays),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      );
+                    }
+
+                    // Индикатор смены месяца с заглавными буквами и letterSpacing: 1.5
+                    if (currentDate.month != nextOlderDate.month || currentDate.year != nextOlderDate.year) {
+                      monthSeparator = Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10.0),
+                        child: Center(
+                          child: Text(
+                            _getMonthYearName(nextOlderDate).toUpperCase(),
+                            style: const TextStyle(
+                              color: Color(0xFF8A9AA6),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+
+                  Widget? topMonthSeparator;
+                  if (index == 0) {
+                     final currentDate = DateTime.parse(sortedDates[index]);
+                     // Выводим верхний заголовок ТОЛЬКО если первая запись не относится к текущему месяцу
+                     if (currentDate.month != now.month || currentDate.year != now.year) {
+                       topMonthSeparator = Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: Center(
+                            child: Text(
+                              _getMonthYearName(currentDate).toUpperCase(),
+                              style: const TextStyle(
+                                color: Color(0xFF8A9AA6),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                          ),
+                        );
+                     }
+                  }
+
+                  if (gapIndicator != null || monthSeparator != null || topMonthSeparator != null) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (topMonthSeparator != null) topMonthSeparator,
+                        cardWidget,
+                        if (gapIndicator != null) gapIndicator,
+                        if (monthSeparator != null) monthSeparator,
+                      ],
                     );
                   }
-                }
 
-                if (gapIndicator != null) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [cardWidget, gapIndicator],
-                  );
-                }
-                return cardWidget;
-              },
-            ),
+                  return cardWidget;
+                },
+              ),
       ),
     );
   }
@@ -375,7 +429,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openMoodInput(BuildContext context, String dateId, String period) {
     int initialScore = 5;
     final record = _diaryRecords[dateId] ?? {};
-
     if (period == 'Утро' && record['morning_mood'] != null) initialScore = record['morning_mood'];
     if (period == 'День' && record['day_mood'] != null) initialScore = record['day_mood'];
     if (period == 'Вечер' && record['evening_mood'] != null) initialScore = record['evening_mood'];
@@ -388,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return MoodInputSheet(
           initialScore: initialScore,
           period: period,
-          onSave: (score) async {          
+          onSave: (score) async {
             setState(() {
               if (!_diaryRecords.containsKey(dateId)) {
                 _diaryRecords[dateId] = {'date_id': dateId};
@@ -397,7 +450,6 @@ class _HomeScreenState extends State<HomeScreen> {
               if (period == 'День') _diaryRecords[dateId]!['day_mood'] = score;
               if (period == 'Вечер') _diaryRecords[dateId]!['evening_mood'] = score;
             });
-
             try {
               await _diaryService.saveMood(dateId, period, score);
             } catch (e) {
@@ -416,8 +468,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openSleepInput(BuildContext context, String dateId) {
     final record = _diaryRecords[dateId] ?? {};
-    double initialValue = record['sleep_hours'] != null 
-        ? (record['sleep_hours'] as num).toDouble() 
+    double initialValue = record['sleep_hours'] != null
+        ? (record['sleep_hours'] as num).toDouble()
         : 8.0;
 
     showModalBottomSheet(
@@ -434,7 +486,6 @@ class _HomeScreenState extends State<HomeScreen> {
               }
               _diaryRecords[dateId]!['sleep_hours'] = sleepValue;
             });
-
             try {
               await _diaryService.saveSleep(dateId, sleepValue);
             } catch (e) {

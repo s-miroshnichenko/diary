@@ -1,5 +1,4 @@
 // Файл: lib/widgets/day_card.dart
-
 import 'package:flutter/material.dart';
 
 class DayCard extends StatelessWidget {
@@ -32,8 +31,6 @@ class DayCard extends StatelessWidget {
     required this.onAddEvening,
   }) : super(key: key);
 
-  /// Функция для форматирования даты в нужный нам вид:
-  /// "СЕГОДНЯ, 27 ФЕВ.", "ВЧЕРА, 26 ФЕВ.", "СРЕДА, 25 ФЕВ."
   String _getFormattedDateString(String dateId) {
     try {
       final parts = dateId.split('-');
@@ -42,14 +39,11 @@ class DayCard extends StatelessWidget {
       final year = int.parse(parts[0]);
       final month = int.parse(parts[1]);
       final day = int.parse(parts[2]);
-
       final date = DateTime(year, month, day);
+
       final now = DateTime.now();
-      
-      // Обнуляем время для корректного расчета разницы в днях
       final today = DateTime(now.year, now.month, now.day);
       final dateToCompare = DateTime(date.year, date.month, date.day);
-
       final difference = today.difference(dateToCompare).inDays;
 
       String prefix;
@@ -66,14 +60,13 @@ class DayCard extends StatelessWidget {
       }
 
       const months = [
-        '', 'ЯНВ.', 'ФЕВ.', 'МАР.', 'АПР.', 'МАЯ', 'ИЮН.',
-        'ИЮЛ.', 'АВГ.', 'СЕН.', 'ОКТ.', 'НОЯБ.', 'ДЕК.'
+        '', 'ЯНВ.', 'ФЕВ.', 'МАРТА', 'АПР.', 'МАЯ', 'ИЮНЯ',
+        'ИЮЛЯ', 'АВГ.', 'СЕН.', 'ОКТ.', 'НОЯБ.', 'ДЕК.'
       ];
       final monthStr = months[month];
-
       return '$prefix, $day $monthStr';
     } catch (e) {
-      return dateId; // Возвращаем как есть в случае ошибки парсинга
+      return dateId;
     }
   }
 
@@ -83,7 +76,6 @@ class DayCard extends StatelessWidget {
     final todayString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final isToday = dateId == todayString;
 
-    // Генерируем нужную строку и заменяем запятую на перенос строки
     final formattedDate = _getFormattedDateString(dateId);
     final multiLineDate = formattedDate.replaceFirst(', ', '\n');
 
@@ -115,19 +107,17 @@ class DayCard extends StatelessWidget {
             SizedBox(
               width: 75,
               child: Padding(
-                padding: EdgeInsets.only(bottom: isToday ? 16.0 : 0),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown, // Поможет длинным дням (ПОНЕДЕЛЬНИК) влезть в 75 пикселей
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    multiLineDate,
-                    style: TextStyle(
-                      fontSize: 11.0,
-                      fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
-                      color: isToday ? Colors.blue.shade700 : Colors.grey.shade700,
-                      height: 1.4,
-                      letterSpacing: 0.5,
-                    ),
+                padding: EdgeInsets.only(bottom: isToday ? 20.0 : 0),
+                child: Text(
+                  multiLineDate,
+                  style: TextStyle(
+                    fontSize: 9.0,
+                    // Для сегодняшнего дня оставляем w600, для прошедших делаем тоньше — w400
+                    fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
+                    // Сделали цвет прошедших дат более темным (0xFF5C6B79)
+                    color: isToday ? Colors.blue.shade700 : const Color(0xFF697A8A),
+                    height: 1.4,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),
@@ -240,7 +230,7 @@ class _TimeSlot extends StatelessWidget {
                   ? Icon(Icons.add_rounded, color: Colors.grey.shade400, size: 20)
                   : (valueText != null
                       ? Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          padding: const EdgeInsets.all(6.0),
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
