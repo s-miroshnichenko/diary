@@ -1,6 +1,6 @@
 // Файл: lib/screens/home_screen.dart
-
 import 'package:flutter/material.dart';
+
 import '../widgets/day_card.dart';
 import '../widgets/sleep_input_sheet.dart';
 import '../widgets/mood_input_sheet.dart';
@@ -55,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _pickDateAndOpen(BuildContext context, {DateTime? initialDate}) async {
     DateTime tempSelectedDate = initialDate ?? DateTime.now();
+
     final DateTime? pickedDate = await showModalBottomSheet<DateTime>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -133,18 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (pickedDate != null) {
       final dateId = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
-      Map<String, dynamic>? record = _diaryRecords[dateId];
-
-      if (record == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Загрузка данных...'), duration: Duration(milliseconds: 500)),
-        );
-        final fetchedRecord = await _diaryService.getRecordForDate(dateId);
-        setState(() {
-          _diaryRecords[dateId] = fetchedRecord ?? {'date_id': dateId};
-        });
-        record = _diaryRecords[dateId];
-      }
+      
+      // БЕРЕМ ИЗ КЭША ИЛИ СОЗДАЕМ ПУСТУЮ ЗАПИСЬ (БЕЗ ЗАДЕРЖЕК)
+      Map<String, dynamic> record = _diaryRecords[dateId] ?? {'date_id': dateId};
 
       if (context.mounted) {
         _openFullDayInput(context, dateId, record);
@@ -163,6 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
           initialData: existingRecord,
           onSave: (sleep, morning, day, evening) async {
             Navigator.of(context).pop();
+
             setState(() {
               if (!_diaryRecords.containsKey(dateId)) {
                 _diaryRecords[dateId] = {'date_id': dateId};
@@ -172,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _diaryRecords[dateId]!['day_mood'] = day;
               _diaryRecords[dateId]!['evening_mood'] = evening;
             });
+
             try {
               await _diaryService.saveFullDay(
                 dateId: dateId,
@@ -213,6 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getDaysDeclension(int count) {
     final int mod10 = count % 10;
     final int mod100 = count % 100;
+
     if (mod100 >= 11 && mod100 <= 19) return 'Пропущено $count дней';
     if (mod10 == 1) return 'Пропущен $count день';
     if (mod10 >= 2 && mod10 <= 4) return 'Пропущено $count дня';
@@ -256,15 +251,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
     final sortedDates = _diaryRecords.keys.toList()
       ..sort((a, b) => b.compareTo(a));
-
     final now = DateTime.now();
 
     return Scaffold(
+      // --- ИЗМЕНЕНИЕ 1: Разрешаем контенту уходить под BottomAppBar ---
+      extendBody: true, 
       backgroundColor: const Color(0xFFF0F2F5),
+      
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
         onPressed: () => _pickDateAndOpen(context),
@@ -275,31 +272,40 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 4,
         child: Icon(Icons.add_rounded, color: primaryTeal, size: 32),
       ),
+      
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
         color: primaryTeal,
         surfaceTintColor: Colors.transparent,
         elevation: 10,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildBottomNavItem(icon: Icons.list_alt_rounded, label: 'Записи', isActive: true, onTap: () {}),
-              _buildBottomNavItem(icon: Icons.bar_chart_rounded, label: 'Статистика', isActive: false, onTap: () {}),
-              const SizedBox(width: 48),
-              _buildBottomNavItem(icon: Icons.calendar_month_rounded, label: 'Календарь', isActive: false, onTap: () {}),
-              _buildBottomNavItem(icon: Icons.more_horiz_rounded, label: 'Больше', isActive: false, onTap: () {}),
-            ],
+        // Оборачиваем в SafeArea для iOS индикатора жестов
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildBottomNavItem(icon: Icons.list_alt_rounded, label: 'Записи', isActive: true, onTap: () {}),
+                _buildBottomNavItem(icon: Icons.bar_chart_rounded, label: 'Статистика', isActive: false, onTap: () {}),
+                const SizedBox(width: 48),
+                _buildBottomNavItem(icon: Icons.calendar_month_rounded, label: 'Календарь', isActive: false, onTap: () {}),
+                _buildBottomNavItem(icon: Icons.more_horiz_rounded, label: 'Больше', isActive: false, onTap: () {}),
+              ],
+            ),
           ),
         ),
       ),
+      
+      // --- ИЗМЕНЕНИЕ 2: Отключаем нижнюю границу у SafeArea ---
       body: SafeArea(
+        bottom: false, 
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
-                padding: const EdgeInsets.only(bottom: 40, top: 24.0),
+                // --- ИЗМЕНЕНИЕ 3: Увеличиваем нижний отступ, чтобы можно было доскроллить ---
+                padding: const EdgeInsets.only(bottom: 120.0, top: 24.0), 
                 itemCount: sortedDates.length,
                 itemBuilder: (context, index) {
                   final dateId = sortedDates[index];
@@ -333,14 +339,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (index < sortedDates.length - 1) {
                     final currentDate = DateTime.parse(sortedDates[index]);
                     final nextOlderDate = DateTime.parse(sortedDates[index + 1]);
-
                     final int missedDays = currentDate.difference(nextOlderDate).inDays.abs() - 1;
+
                     if (missedDays > 0) {
                       gapIndicator = GestureDetector(
-                        onTap: () => _pickDateAndOpen(
-                          context,
-                          initialDate: currentDate.subtract(const Duration(days: 1)),
-                        ),
+                        onTap: () async {
+                          final targetDate = currentDate.subtract(const Duration(days: 1));
+
+                          if (missedDays == 1) {
+                            final dateId = "${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}";
+                            Map<String, dynamic> record = _diaryRecords[dateId] ?? {'date_id': dateId};
+
+                            if (context.mounted) {
+                              _openFullDayInput(context, dateId, record);
+                            }
+                          } else {
+                            _pickDateAndOpen(
+                              context,
+                              initialDate: targetDate,
+                            );
+                          }
+                        },
                         behavior: HitTestBehavior.opaque,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -358,7 +377,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
 
-                    // Индикатор смены месяца с заглавными буквами и letterSpacing: 1.5
                     if (currentDate.month != nextOlderDate.month || currentDate.year != nextOlderDate.year) {
                       monthSeparator = Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -379,24 +397,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   Widget? topMonthSeparator;
                   if (index == 0) {
-                     final currentDate = DateTime.parse(sortedDates[index]);
-                     // Выводим верхний заголовок ТОЛЬКО если первая запись не относится к текущему месяцу
-                     if (currentDate.month != now.month || currentDate.year != now.year) {
-                       topMonthSeparator = Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: Center(
-                            child: Text(
-                              _getMonthYearName(currentDate).toUpperCase(),
-                              style: const TextStyle(
-                                color: Color(0xFF8A9AA6),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 1.5,
-                              ),
+                    final currentDate = DateTime.parse(sortedDates[index]);
+                    if (currentDate.month != now.month || currentDate.year != now.year) {
+                      topMonthSeparator = Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: Center(
+                          child: Text(
+                            _getMonthYearName(currentDate).toUpperCase(),
+                            style: const TextStyle(
+                              color: Color(0xFF8A9AA6),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 1.5,
                             ),
                           ),
-                        );
-                     }
+                        ),
+                      );
+                    }
                   }
 
                   if (gapIndicator != null || monthSeparator != null || topMonthSeparator != null) {
@@ -429,6 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openMoodInput(BuildContext context, String dateId, String period) {
     int initialScore = 5;
     final record = _diaryRecords[dateId] ?? {};
+
     if (period == 'Утро' && record['morning_mood'] != null) initialScore = record['morning_mood'];
     if (period == 'День' && record['day_mood'] != null) initialScore = record['day_mood'];
     if (period == 'Вечер' && record['evening_mood'] != null) initialScore = record['evening_mood'];
@@ -450,6 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (period == 'День') _diaryRecords[dateId]!['day_mood'] = score;
               if (period == 'Вечер') _diaryRecords[dateId]!['evening_mood'] = score;
             });
+
             try {
               await _diaryService.saveMood(dateId, period, score);
             } catch (e) {
@@ -486,6 +505,7 @@ class _HomeScreenState extends State<HomeScreen> {
               }
               _diaryRecords[dateId]!['sleep_hours'] = sleepValue;
             });
+
             try {
               await _diaryService.saveSleep(dateId, sleepValue);
             } catch (e) {

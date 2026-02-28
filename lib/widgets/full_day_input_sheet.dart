@@ -26,14 +26,46 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
 
   final Color primaryTeal = const Color(0xFF4DB6AC);
 
+  final ScrollController _morningScroll = ScrollController(initialScrollOffset: 88.0);
+  final ScrollController _dayScroll = ScrollController(initialScrollOffset: 88.0);
+  final ScrollController _eveningScroll = ScrollController(initialScrollOffset: 88.0);
+
   @override
   void initState() {
     super.initState();
     final data = widget.initialData ?? {};
     _sleepHours = data['sleep_hours'] != null ? (data['sleep_hours'] as num).toDouble() : 8.0;
+    
     _morningMood = data['morning_mood'] as int? ?? 5;
     _dayMood = data['day_mood'] as int? ?? 5;
     _eveningMood = data['evening_mood'] as int? ?? 5;
+  }
+
+  @override
+  void dispose() {
+    _morningScroll.dispose();
+    _dayScroll.dispose();
+    _eveningScroll.dispose();
+    super.dispose();
+  }
+
+  // --- ОБНОВЛЕННАЯ ФУНКЦИЯ ФОРМАТИРОВАНИЯ ДАТЫ ---
+  String _formatDate(String dateStr) {
+    try {
+      final DateTime date = DateTime.parse(dateStr);
+      final List<String> months = [
+        '', 'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+      ];
+      final List<String> weekdays = [
+        '', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'
+      ];
+      
+      // date.weekday возвращает от 1 (пн) до 7 (вс)
+      return '${weekdays[date.weekday]}, ${date.day} ${months[date.month]}';
+    } catch (e) {
+      return dateStr; 
+    }
   }
 
   Color getMoodColor(int score) {
@@ -52,20 +84,21 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
     }
   }
 
-  Widget _buildMoodSelector(String title, int currentValue, ValueChanged<int> onChanged) {
+  Widget _buildMoodSelector(String title, int currentValue, ValueChanged<int> onChanged, ScrollController scrollController) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
         const SizedBox(height: 12),
-        SingleChildScrollView( // Чтобы не было overflow на маленьких экранах
+        SingleChildScrollView(
+          controller: scrollController,
           scrollDirection: Axis.horizontal,
           child: Row(
             children: List.generate(10, (index) {
               final score = index + 1;
               final isSelected = score == currentValue;
               final color = getMoodColor(score);
-              
+
               return GestureDetector(
                 onTap: () => onChanged(score),
                 child: Container(
@@ -110,7 +143,7 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
         top: 24,
         left: 20,
         right: 20,
-        bottom: MediaQuery.of(context).padding.bottom + 20, // Учет челки/свайп-бара
+        bottom: MediaQuery.of(context).padding.bottom + 20, 
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -127,42 +160,56 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            'Заполнение дня (${widget.dateId})',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          
+          // --- ОБНОВЛЕННЫЙ ЗАГОЛОВОК С ДАТОЙ ПО ЦЕНТРУ ---
+          Center(
+            child: Text(
+              _formatDate(widget.dateId),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), 
+            ),
           ),
           const SizedBox(height: 24),
-          
+
           // --- БЛОК СНА ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Сон', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const Text('Сон', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
               Text(
                 '${_sleepHours % 1 == 0 ? _sleepHours.toInt() : _sleepHours} ч',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryTeal),
               ),
             ],
           ),
-          Slider(
-            value: _sleepHours,
-            min: 0,
-            max: 16,
-            divisions: 32,
-            activeColor: primaryTeal,
-            inactiveColor: primaryTeal.withOpacity(0.2),
-            onChanged: (val) => setState(() => _sleepHours = val),
+          
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackShape: const RoundedRectSliderTrackShape(),
+              trackHeight: 6.0,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 20.0),
+            ),
+            child: Slider(
+              value: _sleepHours,
+              min: 0,
+              max: 16,
+              activeColor: primaryTeal,
+              inactiveColor: primaryTeal.withOpacity(0.2),
+              onChanged: (val) {
+                setState(() => _sleepHours = (val * 2).roundToDouble() / 2);
+              },
+            ),
           ),
           const SizedBox(height: 16),
-          
+
           // --- БЛОКИ НАСТРОЕНИЯ ---
-          _buildMoodSelector('Утро', _morningMood, (val) => setState(() => _morningMood = val)),
+          _buildMoodSelector('Утро', _morningMood, (val) => setState(() => _morningMood = val), _morningScroll),
           const SizedBox(height: 20),
-          _buildMoodSelector('День', _dayMood, (val) => setState(() => _dayMood = val)),
+          _buildMoodSelector('День', _dayMood, (val) => setState(() => _dayMood = val), _dayScroll),
           const SizedBox(height: 20),
-          _buildMoodSelector('Вечер', _eveningMood, (val) => setState(() => _eveningMood = val)),
+          _buildMoodSelector('Вечер', _eveningMood, (val) => setState(() => _eveningMood = val), _eveningScroll),
           const SizedBox(height: 32),
-          
+
           // --- КНОПКА СОХРАНИТЬ ---
           SizedBox(
             width: double.infinity,
