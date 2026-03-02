@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 class FullDayInputSheet extends StatefulWidget {
   final String dateId;
   final Map<String, dynamic>? initialData;
-  final Function(double sleep, int morning, int day, int evening) onSave;
+  // Изменили int на int? чтобы разрешить сохранение без выбранного настроения
+  final Function(double sleep, int? morning, int? day, int? evening) onSave;
 
   const FullDayInputSheet({
     Key? key,
@@ -20,9 +21,11 @@ class FullDayInputSheet extends StatefulWidget {
 
 class _FullDayInputSheetState extends State<FullDayInputSheet> {
   late double _sleepHours;
-  late int _morningMood;
-  late int _dayMood;
-  late int _eveningMood;
+  
+  // Изменили late int на int? 
+  int? _morningMood;
+  int? _dayMood;
+  int? _eveningMood;
 
   final Color primaryTeal = const Color(0xFF4DB6AC);
 
@@ -34,11 +37,13 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
   void initState() {
     super.initState();
     final data = widget.initialData ?? {};
+    
     _sleepHours = data['sleep_hours'] != null ? (data['sleep_hours'] as num).toDouble() : 8.0;
     
-    _morningMood = data['morning_mood'] as int? ?? 5;
-    _dayMood = data['day_mood'] as int? ?? 5;
-    _eveningMood = data['evening_mood'] as int? ?? 5;
+    // Убрали ?? 5, теперь по умолчанию будет null, если данных нет
+    _morningMood = data['morning_mood'] as int?;
+    _dayMood = data['day_mood'] as int?;
+    _eveningMood = data['evening_mood'] as int?;
   }
 
   @override
@@ -49,7 +54,6 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
     super.dispose();
   }
 
-  // --- ОБНОВЛЕННАЯ ФУНКЦИЯ ФОРМАТИРОВАНИЯ ДАТЫ ---
   String _formatDate(String dateStr) {
     try {
       final DateTime date = DateTime.parse(dateStr);
@@ -60,11 +64,9 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
       final List<String> weekdays = [
         '', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'
       ];
-      
-      // date.weekday возвращает от 1 (пн) до 7 (вс)
       return '${weekdays[date.weekday]}, ${date.day} ${months[date.month]}';
     } catch (e) {
-      return dateStr; 
+      return dateStr;
     }
   }
 
@@ -84,7 +86,8 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
     }
   }
 
-  Widget _buildMoodSelector(String title, int currentValue, ValueChanged<int> onChanged, ScrollController scrollController) {
+  // currentValue теперь int?, чтобы корректно обрабатывать отсутствие выбора
+  Widget _buildMoodSelector(String title, int? currentValue, ValueChanged<int> onChanged, ScrollController scrollController) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -143,7 +146,7 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
         top: 24,
         left: 20,
         right: 20,
-        bottom: MediaQuery.of(context).padding.bottom + 20, 
+        bottom: MediaQuery.of(context).padding.bottom + 20,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -160,17 +163,13 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
             ),
           ),
           const SizedBox(height: 20),
-          
-          // --- ОБНОВЛЕННЫЙ ЗАГОЛОВОК С ДАТОЙ ПО ЦЕНТРУ ---
           Center(
             child: Text(
               _formatDate(widget.dateId),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), 
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(height: 24),
-
-          // --- БЛОК СНА ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -181,7 +180,6 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
               ),
             ],
           ),
-          
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackShape: const RoundedRectSliderTrackShape(),
@@ -201,16 +199,12 @@ class _FullDayInputSheetState extends State<FullDayInputSheet> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // --- БЛОКИ НАСТРОЕНИЯ ---
           _buildMoodSelector('Утро', _morningMood, (val) => setState(() => _morningMood = val), _morningScroll),
           const SizedBox(height: 20),
           _buildMoodSelector('День', _dayMood, (val) => setState(() => _dayMood = val), _dayScroll),
           const SizedBox(height: 20),
           _buildMoodSelector('Вечер', _eveningMood, (val) => setState(() => _eveningMood = val), _eveningScroll),
           const SizedBox(height: 32),
-
-          // --- КНОПКА СОХРАНИТЬ ---
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(

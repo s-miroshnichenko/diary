@@ -282,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final sortedDates = _diaryRecords.keys.toList()
       ..sort((a, b) => b.compareTo(a));
@@ -291,89 +291,82 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       extendBody: true,
       backgroundColor: const Color(0xFFF0F2F5),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: SizedBox(
-        width: 64,
-        height: 64,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(color: primaryTeal, width: 3.0),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () => _pickDateAndOpen(context),
-              child: Icon(
-                Icons.add_rounded,
-                color: primaryTeal,
-                size: 32,
-              ),
+      // Убираем floatingActionButton и floatingActionButtonLocation
+      
+      bottomNavigationBar: BottomAppBar(
+        color: primaryTeal,
+        surfaceTintColor: Colors.transparent,
+        elevation: 10,
+        // Отступ внутри самой панели. SafeArea позаботится о системной полоске снизу.
+        padding: EdgeInsets.zero, 
+        child: SafeArea(
+          top: false,
+          // Убрали фиксированный SizedBox(height: 72), чтобы панель могла сама 
+          // подстроиться под высоту контента и системные отступы.
+          child: Padding(
+            padding: const EdgeInsets.only(top: 0.0, bottom: 0.0), // Отступ снизу поднимет все кнопки
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildBottomNavItem(icon: Icons.list_alt_rounded, label: 'Записи', isActive: true, onTap: () {}),
+                _buildBottomNavItem(icon: Icons.bar_chart_rounded, label: 'Статистика', isActive: false, onTap: () {}),
+                
+                // Наша кнопка с плюсом
+                Padding(
+                  // Дополнительно приподнимаем сам плюсик чуть выше остальных иконок, 
+                  // если это необходимо визуально. Если хотите вровень — можно удалить этот Padding.
+                  padding: const EdgeInsets.only(bottom: 14.0), 
+                  child: Container(
+                    width: 56, 
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => _pickDateAndOpen(context),
+                        child: Icon(
+                          Icons.add_rounded,
+                          color: primaryTeal,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                _buildBottomNavItem(icon: Icons.calendar_month_rounded, label: 'Календарь', isActive: false, onTap: () {}),
+                _buildBottomNavItem(icon: Icons.more_horiz_rounded, label: 'Больше', isActive: false, onTap: () {}),
+              ],
             ),
           ),
         ),
       ),
-      bottomNavigationBar: Stack(
-        alignment: Alignment.bottomCenter,
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-                child: Container(
-                  color: const Color(0xFFF0F2F5).withAlpha(38),
-                ),
-              ),
-            ),
-          ),
-          BottomAppBar(
-            shape: const CircularNotchedRectangle(),
-            notchMargin: 6.0,
-            color: primaryTeal,
-            surfaceTintColor: Colors.transparent,
-            elevation: 10,
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                height: 60,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildBottomNavItem(icon: Icons.list_alt_rounded, label: 'Записи', isActive: true, onTap: () {}),
-                    _buildBottomNavItem(icon: Icons.bar_chart_rounded, label: 'Статистика', isActive: false, onTap: () {}),
-                    const SizedBox(width: 76),
-                    _buildBottomNavItem(icon: Icons.calendar_month_rounded, label: 'Календарь', isActive: false, onTap: () {}),
-                    _buildBottomNavItem(icon: Icons.more_horiz_rounded, label: 'Больше', isActive: false, onTap: () {}),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-            body: SafeArea(
+
+      body: SafeArea(
         bottom: false,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
                 reverse: true,
-                // Увеличили bottom padding, чтобы "вытолкнуть" карточку из-под бара и плюса
-                padding: const EdgeInsets.only(bottom: 110.0, top: 40.0), 
+                padding: const EdgeInsets.only(bottom: 80.0, top: 40.0),
                 itemCount: sortedDates.length,
                 itemBuilder: (context, index) {
+                  // ... (весь код внутри itemBuilder остается без изменений)
                   final dateId = sortedDates[index];
                   final record = _diaryRecords[dateId]!;
-
                   final double? currentSleep = record['sleep_hours'] != null
                       ? (record['sleep_hours'] as num).toDouble()
                       : null;
@@ -396,22 +389,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     onAddEvening: () => _openInputBottomSheet(context, dateId, 'Вечер'),
                   );
 
-                  List<Widget> beforeCardWidgets = []; // Виджеты НАД карточкой (визуально выше)
+                  List<Widget> beforeCardWidgets = [];
 
                   if (index < sortedDates.length - 1) {
-                    final currentDate = DateTime.parse(sortedDates[index]); // Например, 2 марта
-                    final nextOlderDate = DateTime.parse(sortedDates[index + 1]); // Например, 27 февраля
+                    final currentDate = DateTime.parse(sortedDates[index]);
+                    final nextOlderDate = DateTime.parse(sortedDates[index + 1]);
                     final bool isDifferentMonth = currentDate.month != nextOlderDate.month || currentDate.year != nextOlderDate.year;
 
                     if (isDifferentMonth) {
-                      // 1. Пропуски в ТЕКУЩЕМ месяце (от 1 числа до currentDate)
                       final firstDayOfCurrentMonth = DateTime(currentDate.year, currentDate.month, 1);
                       final int missedInCurrentMonth = currentDate.difference(firstDayOfCurrentMonth).inDays;
                       if (missedInCurrentMonth > 0) {
                         beforeCardWidgets.add(_buildGapIndicator(missedInCurrentMonth));
                       }
 
-                      // 2. Разделитель месяца (название предыдущего месяца)
                       beforeCardWidgets.add(
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -429,14 +420,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       );
 
-                      // 3. Пропуски в ПРЕДЫДУЩЕМ месяце
-                      final lastDayOfPrevMonth = DateTime(currentDate.year, currentDate.month, 0); 
+                      final lastDayOfPrevMonth = DateTime(currentDate.year, currentDate.month, 0);
                       final int missedInPrevMonth = lastDayOfPrevMonth.difference(nextOlderDate).inDays;
                       if (missedInPrevMonth > 0) {
                         beforeCardWidgets.add(_buildGapIndicator(missedInPrevMonth));
                       }
                     } else {
-                      // Тот же месяц
                       final int missedDays = currentDate.difference(nextOlderDate).inDays.abs() - 1;
                       if (missedDays > 0) {
                         beforeCardWidgets.add(_buildGapIndicator(missedDays));
@@ -444,24 +433,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
                   }
 
-                  // Убрали блок с bottomMonthSeparator, который рисовал текущий месяц внизу
-
                   if (beforeCardWidgets.isNotEmpty) {
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        ...beforeCardWidgets, // Плашки и пропуски, которые визуально старше карточки
-                        cardWidget, // Карточка текущего дня
+                        ...beforeCardWidgets,
+                        cardWidget,
                       ],
                     );
                   }
-
                   return cardWidget;
                 },
               ),
       ),
     );
   }
+
 
   void _openInputBottomSheet(BuildContext context, String dateId, String period) {
     if (period == 'Сон') {

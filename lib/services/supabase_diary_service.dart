@@ -103,13 +103,13 @@ class SupabaseDiaryService {
     }
   }
 
-  Future<void> saveFullDay({
-    required String dateId,
-    required double sleepHours,
-    required int morningMood,
-    required int dayMood,
-    required int eveningMood,
-  }) async {
+Future<void> saveFullDay({
+  required String dateId,
+  double? sleepHours, // <-- double? вместо double
+  int? morningMood,   // <-- int? вместо int
+  int? dayMood,       // <-- int? вместо int
+  int? eveningMood,   // <-- int? вместо int
+}) async {
     await _supabase.from(_table).upsert({
       'user_id': currentUserId,
       'date_id': dateId,
