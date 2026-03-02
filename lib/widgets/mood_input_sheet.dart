@@ -1,4 +1,5 @@
 // Файл: lib/widgets/mood_input_sheet.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -45,8 +46,8 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
       case 1: return 'Полный крах';
       case 2: return 'Тяжело и темно';
       case 3: return 'Легкая депрессия';
-      case 4: return 'Функциональный спад';
-      case 5: return 'Нейтралитет';
+      case 4: return 'Спад настроения';
+      case 5: return 'Тихое спокойствие';
       case 6: return 'Активная норма';
       case 7: return 'Светлый подъем';
       case 8: return 'Гиперактивность';
@@ -60,15 +61,15 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
   String getMoodDescription(int score) {
     switch (score) {
       case 1: return 'Нет сил даже на базовые вещи. Ощущение безысходности.';
-      case 2: return 'Мир кажется враждебным. Все требует огромных усилий.';
-      case 3: return 'Заметно сниженный фон настроения, абсолютное равнодушие.';
-      case 4: return 'Делаю только то, что обязан, и только через силу.';
+      case 2: return 'Сильная усталость и подавленность. Повседневные дела даются с огромным трудом.';
+      case 3: return 'Тяжело делать повседневные дела. Требуется волевое усилие.';
+      case 4: return 'Легкая грусть, лень, снижение энергии. Функциональность 100%, но без удовольствия';
       case 5: return 'Ровный фон. Ни хорошо, ни плохо, просто обычный день.';
       case 6: return 'Есть энергия на дела и общение. Стабильное состояние.';
       case 7: return 'Отличное настроение, много идей, хочется действовать.';
-      case 8: return 'Мыслей очень много, энергии через край, сплю меньше.';
+      case 8: return 'Мыслей очень много, энергии через край. Сплю меньше обычного, но не устаю.';
       case 9: return 'Ощущение всемогущества и нереального счастья.';
-      case 10: return 'Мысли скачут невероятно быстро, спать не могу вообще.';
+      case 10: return 'Мысли скачут невероятно быстро, спать не могу вообще. Полная потеря контроля.';
       default: return '';
     }
   }
@@ -90,7 +91,8 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.6,
+      // 1. СДЕЛАЛИ ВЫШЕ: изменили 0.6 на 0.75 (можно поменять под твои нужды)
+      height: MediaQuery.of(context).size.height * 0.75,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
@@ -113,7 +115,6 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          
           // Сам барабан
           Expanded(
             child: Stack(
@@ -151,7 +152,7 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
                       final score = index + 1;
                       final isSelected = score == _selectedScore;
                       final color = getMoodColor(score);
-                      
+
                       // ИСПОЛЬЗУЕМ СОВРЕМЕННЫЙ AnimatedScale + AnimatedOpacity
                       return AnimatedScale(
                         scale: isSelected ? 1.1 : 0.9,
@@ -161,10 +162,9 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
                           opacity: isSelected ? 1.0 : 0.4,
                           duration: const Duration(milliseconds: 200),
                           curve: Curves.easeOut,
-                                                    child: Padding(
+                          child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24.0), // Отступы по бокам!
                             child: Row(
-                              // Убрали mainAxisAlignment: MainAxisAlignment.center
                               children: [
                                 // Блок с цифрой фиксированной ширины, чтобы текст не прыгал
                                 SizedBox(
@@ -208,16 +208,22 @@ class _MoodInputSheetState extends State<MoodInputSheet> {
           // Подробное описание под барабаном
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Text(
-                getMoodDescription(_selectedScore),
-                key: ValueKey<int>(_selectedScore),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  fontStyle: FontStyle.italic,
+            // 2. ФИКСАЦИЯ РАЗМЕРА: Обернули в SizedBox с фиксированной высотой
+            child: SizedBox(
+              height: 60, // Фиксированная высота блока с текстом (хватит на 3 строки)
+              child: Center( // Выравнивание по центру по вертикали, если строк мало
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    getMoodDescription(_selectedScore),
+                    key: ValueKey<int>(_selectedScore),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                 ),
               ),
             ),
