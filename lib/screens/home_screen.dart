@@ -20,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   final SupabaseDiaryService _diaryService = SupabaseDiaryService();
   Map<String, Map<String, dynamic>> _diaryRecords = {};
+
   final Color primaryTeal = const Color(0xFF4DB6AC);
 
   @override
@@ -36,8 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     // Формируем строку для текущего месяца (например, "2026-03")
     final currentYearMonth = "${now.year}-${now.month.toString().padLeft(2, '0')}";
-
-    // Формируем строку для предыдущего месяца (Dart сам отработает переход на прошлый год, если сейчас январь)
+    // Формируем строку для предыдущего месяца
     final prevMonthDate = DateTime(now.year, now.month - 1, 1);
     final prevYearMonth = "${prevMonthDate.year}-${prevMonthDate.month.toString().padLeft(2, '0')}";
 
@@ -149,10 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (pickedDate != null) {
       final dateId = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
-      
-      // БЕРЕМ ИЗ КЭША ИЛИ СОЗДАЕМ ПУСТУЮ ЗАПИСЬ
       Map<String, dynamic> record = _diaryRecords[dateId] ?? {'date_id': dateId};
-
       if (context.mounted) {
         _openFullDayInput(context, dateId, record);
       }
@@ -170,7 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
           initialData: existingRecord,
           onSave: (sleep, morning, day, evening) async {
             Navigator.of(context).pop();
-
             setState(() {
               if (!_diaryRecords.containsKey(dateId)) {
                 _diaryRecords[dateId] = {'date_id': dateId};
@@ -180,7 +176,6 @@ class _HomeScreenState extends State<HomeScreen> {
               _diaryRecords[dateId]!['day_mood'] = day;
               _diaryRecords[dateId]!['evening_mood'] = evening;
             });
-
             try {
               await _diaryService.saveFullDay(
                 dateId: dateId,
@@ -228,6 +223,28 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Пропущено $count дней';
   }
 
+  Widget _buildGapIndicator(int missedDays) {
+    return GestureDetector(
+      onTap: () async {
+        // ... логика тапа по пропуску
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Center(
+          child: Text(
+            _getDaysDeclension(missedDays),
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade500,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   String _getMonthYearName(DateTime date) {
     const months = [
       'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -272,15 +289,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
 
     return Scaffold(
-      // ВАЖНО: Разрешаем контенту и стеклу уходить под BottomAppBar
-      extendBody: true, 
+      extendBody: true,
       backgroundColor: const Color(0xFFF0F2F5),
-      
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      
-      // Идеально ровная, круглая кнопка без эффекта стекла внутри
       floatingActionButton: SizedBox(
-        width: 64, 
+        width: 64,
         height: 64,
         child: Container(
           decoration: BoxDecoration(
@@ -309,14 +322,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-
-      // Stack для объединения стекла и нижней панели
       bottomNavigationBar: Stack(
         alignment: Alignment.bottomCenter,
         clipBehavior: Clip.none,
         children: [
-          // Прямоугольный стеклянный фон, который автоматически 
-          // займет точную высоту и ширину BottomAppBar
           Positioned.fill(
             child: ClipRect(
               child: BackdropFilter(
@@ -327,13 +336,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
-          // Бирюзовая панель с вырезом
           BottomAppBar(
             shape: const CircularNotchedRectangle(),
             notchMargin: 6.0,
-            color: primaryTeal, // Если хотите, чтобы вся панель была стеклянной: primaryTeal.withOpacity(0.85)
-            surfaceTintColor: Colors.transparent, 
+            color: primaryTeal,
+            surfaceTintColor: Colors.transparent,
             elevation: 10,
             child: SafeArea(
               top: false,
@@ -344,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     _buildBottomNavItem(icon: Icons.list_alt_rounded, label: 'Записи', isActive: true, onTap: () {}),
                     _buildBottomNavItem(icon: Icons.bar_chart_rounded, label: 'Статистика', isActive: false, onTap: () {}),
-                    const SizedBox(width: 76), // Место под кнопку и ее ободок
+                    const SizedBox(width: 76),
                     _buildBottomNavItem(icon: Icons.calendar_month_rounded, label: 'Календарь', isActive: false, onTap: () {}),
                     _buildBottomNavItem(icon: Icons.more_horiz_rounded, label: 'Больше', isActive: false, onTap: () {}),
                   ],
@@ -354,14 +361,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      
-      // Контент экрана
-      body: SafeArea(
-        bottom: false, 
+            body: SafeArea(
+        bottom: false,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
-                padding: const EdgeInsets.only(bottom: 120.0, top: 24.0), 
+                reverse: true,
+                // Увеличили bottom padding, чтобы "вытолкнуть" карточку из-под бара и плюса
+                padding: const EdgeInsets.only(bottom: 110.0, top: 40.0), 
                 itemCount: sortedDates.length,
                 itemBuilder: (context, index) {
                   final dateId = sortedDates[index];
@@ -389,83 +396,62 @@ class _HomeScreenState extends State<HomeScreen> {
                     onAddEvening: () => _openInputBottomSheet(context, dateId, 'Вечер'),
                   );
 
-                  Widget? gapIndicator;
-                  Widget? monthSeparator;
+                  List<Widget> beforeCardWidgets = []; // Виджеты НАД карточкой (визуально выше)
 
                   if (index < sortedDates.length - 1) {
-                    final currentDate = DateTime.parse(sortedDates[index]);
-                    final nextOlderDate = DateTime.parse(sortedDates[index + 1]);
-                    final int missedDays = currentDate.difference(nextOlderDate).inDays.abs() - 1;
+                    final currentDate = DateTime.parse(sortedDates[index]); // Например, 2 марта
+                    final nextOlderDate = DateTime.parse(sortedDates[index + 1]); // Например, 27 февраля
+                    final bool isDifferentMonth = currentDate.month != nextOlderDate.month || currentDate.year != nextOlderDate.year;
 
-                    if (missedDays > 0) {
-                      gapIndicator = GestureDetector(
-                        onTap: () async {
-                          // ... логика тапа
-                        },
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0), 
+                    if (isDifferentMonth) {
+                      // 1. Пропуски в ТЕКУЩЕМ месяце (от 1 числа до currentDate)
+                      final firstDayOfCurrentMonth = DateTime(currentDate.year, currentDate.month, 1);
+                      final int missedInCurrentMonth = currentDate.difference(firstDayOfCurrentMonth).inDays;
+                      if (missedInCurrentMonth > 0) {
+                        beforeCardWidgets.add(_buildGapIndicator(missedInCurrentMonth));
+                      }
+
+                      // 2. Разделитель месяца (название предыдущего месяца)
+                      beforeCardWidgets.add(
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10.0),
                           child: Center(
                             child: Text(
-                              _getDaysDeclension(missedDays),
-                              style: TextStyle(
+                              _getMonthYearName(nextOlderDate).toUpperCase(),
+                              style: const TextStyle(
+                                color: Color(0xFF8A9AA6),
                                 fontSize: 12,
-                                color: Colors.grey.shade500,
-                                fontWeight: FontWeight.w400, 
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1,
                               ),
                             ),
                           ),
                         ),
                       );
-                    }
 
-                    if (currentDate.month != nextOlderDate.month || currentDate.year != nextOlderDate.year) {
-                      monthSeparator = Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10.0),
-                        child: Center(
-                          child: Text(
-                            _getMonthYearName(nextOlderDate).toUpperCase(),
-                            style: const TextStyle(
-                              color: Color(0xFF8A9AA6),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                      );
+                      // 3. Пропуски в ПРЕДЫДУЩЕМ месяце
+                      final lastDayOfPrevMonth = DateTime(currentDate.year, currentDate.month, 0); 
+                      final int missedInPrevMonth = lastDayOfPrevMonth.difference(nextOlderDate).inDays;
+                      if (missedInPrevMonth > 0) {
+                        beforeCardWidgets.add(_buildGapIndicator(missedInPrevMonth));
+                      }
+                    } else {
+                      // Тот же месяц
+                      final int missedDays = currentDate.difference(nextOlderDate).inDays.abs() - 1;
+                      if (missedDays > 0) {
+                        beforeCardWidgets.add(_buildGapIndicator(missedDays));
+                      }
                     }
                   }
 
-                  Widget? topMonthSeparator;
-                  if (index == 0) {
-                    final currentDate = DateTime.parse(sortedDates[index]);
-                    if (currentDate.month != now.month || currentDate.year != now.year) {
-                      topMonthSeparator = Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Center(
-                          child: Text(
-                            _getMonthYearName(currentDate).toUpperCase(),
-                            style: const TextStyle(
-                              color: Color(0xFF8A9AA6),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                  }
+                  // Убрали блок с bottomMonthSeparator, который рисовал текущий месяц внизу
 
-                  if (gapIndicator != null || monthSeparator != null || topMonthSeparator != null) {
+                  if (beforeCardWidgets.isNotEmpty) {
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (topMonthSeparator != null) topMonthSeparator,
-                        cardWidget,
-                        if (monthSeparator != null) monthSeparator, // СНАЧАЛА МЕСЯЦ
-                        if (gapIndicator != null) gapIndicator,     // ПОТОМ ПРОПУСК
+                        ...beforeCardWidgets, // Плашки и пропуски, которые визуально старше карточки
+                        cardWidget, // Карточка текущего дня
                       ],
                     );
                   }
@@ -488,7 +474,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openMoodInput(BuildContext context, String dateId, String period) {
     int initialScore = 5;
     final record = _diaryRecords[dateId] ?? {};
-
     if (period == 'Утро' && record['morning_mood'] != null) initialScore = record['morning_mood'];
     if (period == 'День' && record['day_mood'] != null) initialScore = record['day_mood'];
     if (period == 'Вечер' && record['evening_mood'] != null) initialScore = record['evening_mood'];
@@ -510,7 +495,6 @@ class _HomeScreenState extends State<HomeScreen> {
               if (period == 'День') _diaryRecords[dateId]!['day_mood'] = score;
               if (period == 'Вечер') _diaryRecords[dateId]!['evening_mood'] = score;
             });
-
             try {
               await _diaryService.saveMood(dateId, period, score);
             } catch (e) {
@@ -547,7 +531,6 @@ class _HomeScreenState extends State<HomeScreen> {
               }
               _diaryRecords[dateId]!['sleep_hours'] = sleepValue;
             });
-
             try {
               await _diaryService.saveSleep(dateId, sleepValue);
             } catch (e) {
